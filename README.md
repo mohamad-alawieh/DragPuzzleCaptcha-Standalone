@@ -1,0 +1,1 @@
+# DragPuzzleCaptcha-Standalone
