@@ -1,3 +1,3 @@
-import DragPuzzleCaptcha from './DragPuzzleCaptcha';
+import DragPuzzleCaptcha from './DragPuzzleCaptcha.jsx';
 
 export default DragPuzzleCaptcha;

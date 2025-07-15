@@ -293,7 +293,7 @@
 .drag-puzzle-track {
   position: relative;
   width: 100%;
-  height: 50px;
+  height: 54px;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #f8f9fa 100%);
   border-radius: 25px;
   border: 2px solid #dee2e6;

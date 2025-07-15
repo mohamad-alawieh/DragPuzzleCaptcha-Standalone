@@ -1,12 +1,26 @@
 {
   "name": "drag-puzzle-captcha",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A beautiful, modern drag-and-drop puzzle CAPTCHA component for React applications",
   "main": "index.js",
+  "module": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "require": "./index.js",
+      "types": "./index.d.ts"
+    },
+    "./style": "./style.js",
+    "./styles": "./DragPuzzleCaptcha.css",
+    "./DragPuzzleCaptcha.css": "./DragPuzzleCaptcha.css"
+  },
   "files": [
     "DragPuzzleCaptcha.jsx",
     "DragPuzzleCaptcha.css",
     "index.js",
+    "index.d.ts",
+    "style.js",
     "README.md",
     "QUICK_START.md"
   ],
@@ -28,7 +42,12 @@
     "security-verification",
     "form-validation",
     "anti-bot",
-    "human-verification"
+    "human-verification",
+    "vite",
+    "nextjs",
+    "typescript",
+    "es-modules",
+    "react-component"
   ],
   "author": {
     "name": "mhamad-alawieh",
@@ -37,7 +56,8 @@
   },
   "license": "MIT",
   "peerDependencies": {
-    "react": ">=16.8.0"
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
   },
   "dependencies": {},
   "devDependencies": {},
