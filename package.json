@@ -1,0 +1,58 @@
+{
+  "name": "drag-puzzle-captcha",
+  "version": "1.0.0",
+  "description": "A beautiful, modern drag-and-drop puzzle CAPTCHA component for React applications",
+  "main": "index.js",
+  "files": [
+    "DragPuzzleCaptcha.jsx",
+    "DragPuzzleCaptcha.css",
+    "index.js",
+    "README.md",
+    "QUICK_START.md"
+  ],
+  "scripts": {
+    "prepublishOnly": "echo 'Publishing drag-puzzle-captcha...'",
+    "test": "echo 'No tests specified yet'"
+  },
+  "keywords": [
+    "react",
+    "captcha",
+    "security",
+    "drag-drop",
+    "puzzle",
+    "verification",
+    "ui",
+    "component",
+    "slider-captcha",
+    "puzzle-captcha",
+    "security-verification",
+    "form-validation",
+    "anti-bot",
+    "human-verification"
+  ],
+  "author": {
+    "name": "mhamad-alawieh",
+    "email": "mhamad.alawieh@example.com",
+    "url": "https://github.com/mhamad-alawieh"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=16.8.0"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mhamad-alawieh/drag-puzzle-captcha.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mhamad-alawieh/drag-puzzle-captcha/issues"
+  },
+  "homepage": "https://github.com/mhamad-alawieh/drag-puzzle-captcha#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
