@@ -9,6 +9,8 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
   const [backgroundImage, setBackgroundImage] = useState('');
   const [puzzleImage, setPuzzleImage] = useState('');
   const [targetPosition, setTargetPosition] = useState(0);
+  const [targetY, setTargetY] = useState(0);
+  const [puzzleY, setPuzzleY] = useState(0);
   const [attempts, setAttempts] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -50,11 +52,52 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
     isVerified: () => isVerified,
   }));
 
+  // Get responsive dimensions based on screen size
+  const getResponsiveDimensions = () => {
+    const viewportWidth = window.innerWidth;
+    const padding = 64; // 4rem in pixels
+    
+    let backgroundWidth, backgroundHeight, pieceSize, sliderMax;
+    
+    if (viewportWidth <= 360) {
+      // Very small mobile
+      backgroundWidth = Math.min(260, viewportWidth - 32);
+      backgroundHeight = Math.round(backgroundWidth * 0.527);
+      pieceSize = Math.min(50, backgroundWidth * 0.192);
+      sliderMax = backgroundWidth - pieceSize;
+    } else if (viewportWidth <= 480) {
+      // Small mobile
+      backgroundWidth = Math.min(280, viewportWidth - 40);
+      backgroundHeight = Math.round(backgroundWidth * 0.529);
+      pieceSize = Math.min(55, backgroundWidth * 0.196);
+      sliderMax = backgroundWidth - pieceSize;
+    } else if (viewportWidth <= 768) {
+      // Tablets
+      backgroundWidth = Math.min(300, viewportWidth - 48);
+      backgroundHeight = Math.round(backgroundWidth * 0.527);
+      pieceSize = Math.min(60, backgroundWidth * 0.2);
+      sliderMax = backgroundWidth - pieceSize;
+    } else {
+      // Desktop and large screens
+      backgroundWidth = Math.min(340, viewportWidth - padding);
+      backgroundHeight = 180;
+      pieceSize = 70;
+      sliderMax = 290; // 340 - 50 (slider button width)
+    }
+    
+    return {
+      backgroundWidth,
+      backgroundHeight,
+      pieceSize,
+      sliderMax
+    };
+  };
+
   // Generate random background with canvas
-  const generateRandomBackground = () => {
+  const generateRandomBackground = (width = 340, height = 180) => {
     const canvas = document.createElement('canvas');
-    canvas.width = 340;
-    canvas.height = 180;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext('2d');
 
     // Create gradient background
@@ -97,11 +140,14 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
 
   // Reset puzzle
   const resetPuzzle = () => {
+    console.log('Resetting puzzle');
     setIsVerified(false);
     setIsDragging(false);
     setSliderPosition(0);
     setPuzzlePosition(0);
     setAttempts(0);
+    setTargetY(0);
+    setPuzzleY(0);
     generatePuzzle();
   };
 
@@ -110,25 +156,32 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
     setIsLoading(true);
     
     setTimeout(() => {
-      const bgImage = generateRandomBackground();
+      const dimensions = getResponsiveDimensions();
+      const { backgroundWidth, backgroundHeight, pieceSize, sliderMax } = dimensions;
+      
+      const bgImage = generateRandomBackground(backgroundWidth, backgroundHeight);
       setBackgroundImage(bgImage);
+      
+      // Calculate positions based on responsive dimensions
+      const targetX = Math.random() * (backgroundWidth - pieceSize);
+      const sharedY = Math.random() * (backgroundHeight - pieceSize);
+      
+      setTargetPosition(targetX);
+      setTargetY(sharedY);
+      setPuzzleY(sharedY); // Same Y position as the hole
       
       // Create puzzle piece from background
       const canvas = document.createElement('canvas');
-      canvas.width = 70;
-      canvas.height = 70;
+      canvas.width = pieceSize;
+      canvas.height = pieceSize;
       const ctx = canvas.getContext('2d');
       
       const img = new Image();
       img.onload = () => {
-        const targetX = Math.random() * (340 - 70);
-        const targetY = Math.random() * (180 - 70);
-        
-        ctx.drawImage(img, -targetX, -targetY, 340, 180);
+        ctx.drawImage(img, -targetX, -sharedY, backgroundWidth, backgroundHeight);
         
         const pieceImage = canvas.toDataURL();
         setPuzzleImage(pieceImage);
-        setTargetPosition(targetX);
         setIsLoading(false);
       };
       img.src = bgImage;
@@ -140,21 +193,37 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
     if (isVerified) return;
     setIsDragging(true);
     
-    const startX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
+    const dimensions = getResponsiveDimensions();
+    const { sliderMax } = dimensions;
+    
+    const startX = e.type === 'mousedown' ? e.clientX : 
+                   e.touches && e.touches[0] ? e.touches[0].clientX : 
+                   e.clientX; // Fallback to clientX if touches not available
     const startPosition = sliderPosition;
 
-    const handleMove = (e) => {
-      const currentX = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX;
+    const handleMove = (moveEvent) => {
+      const currentX = moveEvent.type === 'mousemove' ? moveEvent.clientX : 
+                      moveEvent.touches && moveEvent.touches[0] ? moveEvent.touches[0].clientX : 
+                      moveEvent.clientX; // Fallback to clientX if touches not available
       const deltaX = currentX - startX;
-      const newPosition = Math.max(0, Math.min(startPosition + deltaX, 290));
+      const newPosition = Math.max(0, Math.min(startPosition + deltaX, sliderMax));
       
       setSliderPosition(newPosition);
       setPuzzlePosition(newPosition);
     };
 
-    const handleEnd = () => {
+    const handleEnd = (endEvent) => {
       setIsDragging(false);
-      checkVerification();
+      // Get the final position directly from the last calculation
+      const currentX = endEvent.type === 'mouseup' ? endEvent.clientX : 
+                      endEvent.changedTouches && endEvent.changedTouches[0] ? endEvent.changedTouches[0].clientX : 
+                      endEvent.clientX; // Fallback to clientX if touches not available
+      const deltaX = currentX - startX;
+      const finalPosition = Math.max(0, Math.min(startPosition + deltaX, sliderMax));
+      
+      // Pass the final position directly to verification
+      checkVerification(finalPosition);
+      
       document.removeEventListener('mousemove', handleMove);
       document.removeEventListener('mouseup', handleEnd);
       document.removeEventListener('touchmove', handleMove);
@@ -168,25 +237,68 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
   };
 
   // Check verification
-  const checkVerification = () => {
-    const tolerance = 15;
-    const success = Math.abs(puzzlePosition - targetPosition) < tolerance;
+  const checkVerification = (currentPosition = puzzlePosition) => {
+    const tolerance = 20; // Increased tolerance for better user experience
+    const distance = Math.abs(currentPosition - targetPosition);
+    const success = distance < tolerance;
+    
+    console.log('Verification check:', {
+      currentPosition,
+      puzzlePosition, // Also log state position for comparison
+      targetPosition, 
+      distance,
+      tolerance,
+      success
+    });
     
     if (success) {
       setIsVerified(true);
+      // Update positions to the current position to ensure consistency
+      setSliderPosition(currentPosition);
+      setPuzzlePosition(currentPosition);
+      
+      // Add success animation to modal
+      if (modalRef.current) {
+        modalRef.current.classList.add('success-animation');
+        setTimeout(() => {
+          if (modalRef.current) {
+            modalRef.current.classList.remove('success-animation');
+          }
+        }, 800);
+      }
+      
       if (onVerify) {
         onVerify(true);
       }
+      
+      // Close modal after successful verification with a delay to show success state
+      setTimeout(() => {
+        if (onCloseModal) {
+          onCloseModal();
+        }
+      }, 2000); // 2 second delay to show success message
     } else {
-      setAttempts(prev => prev + 1);
+      setAttempts(prev => {
+        const newAttempts = prev + 1;
+        console.log('Failed attempt:', newAttempts);
+        return newAttempts;
+      });
+      
       // Reset position if failed
       setTimeout(() => {
         setSliderPosition(0);
         setPuzzlePosition(0);
-      }, 500);
+      }, 800); // Increased delay to show feedback
       
       if (onVerify) {
         onVerify(false);
+      }
+      
+      // Generate new puzzle after 3 failed attempts
+      if (attempts >= 2) {
+        setTimeout(() => {
+          resetPuzzle();
+        }, 1000);
       }
     }
   };
@@ -224,6 +336,25 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
     generatePuzzle();
   }, []);
 
+  // Handle window resize - regenerate puzzle for new dimensions
+  useEffect(() => {
+    const handleResize = () => {
+      // Debounce resize events
+      clearTimeout(window.resizeTimeout);
+      window.resizeTimeout = setTimeout(() => {
+        if (!isDragging && !isVerified) {
+          generatePuzzle();
+        }
+      }, 300);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(window.resizeTimeout);
+    };
+  }, [isDragging, isVerified]);
+
   // Prevent touch scrolling during drag
   useEffect(() => {
     if (isDragging) {
@@ -260,7 +391,7 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
           className: 'drag-puzzle-hole',
           style: {
             left: `${targetPosition}px`,
-            top: `${Math.random() * (180 - 70)}px`
+            top: `${targetY}px`
           }
         }),
         React.createElement('div', {
@@ -269,7 +400,7 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
           style: {
             backgroundImage: `url(${puzzleImage})`,
             left: `${puzzlePosition}px`,
-            top: `${Math.random() * (180 - 70)}px`
+            top: `${puzzleY}px`
           }
         })
       ),
@@ -300,29 +431,37 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
           isVerified ? getText('successText') : getText('dragText')
         )
       ),
-      attempts > 0 && !isVerified && React.createElement(
-        'div',
-        { className: 'drag-puzzle-attempts' },
-        `${getText('attempts')}: ${attempts}`
-      ),
       React.createElement(
         'div',
-        { className: 'drag-puzzle-actions' },
+        { className: 'drag-puzzle-attempts-container' },
+        attempts > 0 && !isVerified && React.createElement(
+          'div',
+          { className: 'drag-puzzle-attempts' },
+          `${getText('attempts')}: ${attempts}/3`
+        ),
         React.createElement(
-          'button',
-          {
-            className: 'drag-puzzle-refresh',
-            onClick: resetPuzzle,
-            disabled: isDragging
-          },
-          getText('newPuzzle')
+          'div',
+          { className: 'drag-puzzle-actions' },
+          React.createElement(
+            'button',
+            {
+              className: 'drag-puzzle-refresh',
+              onClick: resetPuzzle,
+              disabled: isDragging
+            },
+            getText('newPuzzle')
+          )
         )
       )
     )
   );
 
-  if (showModal) {
-    if (isLoading) {
+  // Don't render anything if modal should not be shown
+  if (!showModal) {
+    return null;
+  }
+
+  if (isLoading) {
       return React.createElement(
         'div',
         { className: 'drag-puzzle-modal-overlay', onClick: handleBackdropClick },
@@ -383,18 +522,6 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
         )
       )
     );
-  }
-
-  return React.createElement(
-    'div',
-    { className: 'drag-puzzle-container', ref: containerRef },
-    React.createElement(
-      'div',
-      { className: 'drag-puzzle-title' },
-      getText('instruction')
-    ),
-    content
-  );
 });
 
 DragPuzzleCaptcha.displayName = 'DragPuzzleCaptcha';

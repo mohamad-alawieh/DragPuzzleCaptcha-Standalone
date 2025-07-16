@@ -9,6 +9,8 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
   const [backgroundImage, setBackgroundImage] = useState('');
   const [puzzleImage, setPuzzleImage] = useState('');
   const [targetPosition, setTargetPosition] = useState(0);
+  const [targetY, setTargetY] = useState(0);
+  const [puzzleY, setPuzzleY] = useState(0);
   const [attempts, setAttempts] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -16,6 +18,7 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
   const containerRef = useRef(null);
   const puzzleRef = useRef(null);
   const modalRef = useRef(null);
+  const currentPositionRef = useRef(0);
 
   // Text localization
   const getText = (key) => {
@@ -140,9 +143,13 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
     const backgroundImageUrl = canvas.toDataURL();
     setBackgroundImage(backgroundImageUrl);
     
-    // Generate puzzle piece position (adjusted for new dimensions)
+    // Generate puzzle piece position (adjusted for new dimensions) - calculate once
     const newTargetPosition = Math.random() * (340 - 70) + 35; // 70px puzzle width, 35px margin
+    const sharedY = Math.random() * (180 - 70); // Same Y for both hole and piece
+    
     setTargetPosition(newTargetPosition);
+    setTargetY(sharedY);
+    setPuzzleY(sharedY); // Same Y position as the hole
     
     // Create puzzle piece image with more sophisticated design
     const puzzleCanvas = document.createElement('canvas');
@@ -198,6 +205,8 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
     setSliderPosition(0);
     setPuzzlePosition(0);
     setAttempts(0);
+    setTargetY(0);
+    setPuzzleY(0);
     generatePuzzle();
   };
 
@@ -216,18 +225,38 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
     
     setSliderPosition(newPosition);
     setPuzzlePosition(newPosition);
+    
+    // Store the current position for verification
+    currentPositionRef.current = newPosition;
   };
 
   const handleMouseUp = () => {
     if (!isDragging) return;
     setIsDragging(false);
     
-    // Check if puzzle is in correct position (within 15px tolerance for larger piece)
-    const tolerance = 15;
-    const isCorrect = Math.abs(puzzlePosition - targetPosition) < tolerance;
+    // Use the stored position from the last mouse move event
+    const currentPosition = currentPositionRef.current;
+    
+    // Check if puzzle is in correct position (increased tolerance for better UX)
+    const tolerance = 20;
+    const distance = Math.abs(currentPosition - targetPosition);
+    const isCorrect = distance < tolerance;
+    
+    console.log('JSX Verification check:', {
+      currentPosition,
+      puzzlePosition, // Also log state position for comparison
+      targetPosition, 
+      distance,
+      tolerance,
+      isCorrect
+    });
     
     if (isCorrect) {
       setIsVerified(true);
+      
+      // Update positions to the current position to ensure consistency
+      setSliderPosition(currentPosition);
+      setPuzzlePosition(currentPosition);
       
       // Add success animation to modal
       if (modalRef.current) {
@@ -247,12 +276,20 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
         }
       }, 2000); // Increased delay to show success state
     } else {
-      setAttempts(prev => prev + 1);
+      setAttempts(prev => {
+        const newAttempts = prev + 1;
+        console.log('JSX Failed attempt:', newAttempts);
+        return newAttempts;
+      });
       // Reset position after failed attempt
       setTimeout(() => {
         setSliderPosition(0);
         setPuzzlePosition(0);
-      }, 500);
+      }, 800); // Increased delay to show feedback
+      
+      if (onVerify) {
+        onVerify(false);
+      }
       
       // Generate new puzzle after 3 failed attempts
       if (attempts >= 2) {
@@ -330,7 +367,7 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
                 className="drag-puzzle-hole"
                 style={{ 
                   left: `${targetPosition}px`,
-                  top: '55px' // Center vertically in the larger background
+                  top: `${targetY}px`
                 }}
               />
               
@@ -340,7 +377,7 @@ const DragPuzzleCaptcha = forwardRef(({ onVerify, language = "eng", showModal = 
                 ref={puzzleRef}
                 style={{ 
                   left: `${puzzlePosition}px`,
-                  top: '55px',
+                  top: `${puzzleY}px`,
                   backgroundImage: `url(${puzzleImage})`
                 }}
               />
